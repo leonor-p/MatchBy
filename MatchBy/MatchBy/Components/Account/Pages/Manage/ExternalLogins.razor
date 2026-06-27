@@ -1,0 +1,166 @@
+﻿@page "/Account/Manage/ExternalLogins"
+
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityUserAccessor UserAccessor
+@inject IUserStore<ApplicationUser> UserStore
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Manage your external logins</PageTitle>
+
+<section class="space-y-6">
+    <h2 class="text-lg font-medium text-[var(--text)] mb-6">Manage your external logins</h2>
+
+    <StatusMessage />
+
+    @if (_currentLogins?.Count > 0)
+    {
+        <div>
+            <h3 class="text-md font-medium text-[var(--text)] mb-3">Registered logins</h3>
+
+            <div class="overflow-x-auto rounded-lg border border-gray-300">
+                <table class="min-w-full divide-y divide-gray-300">
+                    <thead class="bg-[var(--section-secondary)]">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--text)] uppercase tracking-wider">Provider</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--text)] uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-[var(--section)] divide-y divide-gray-300">
+                        @foreach (var login in _currentLogins)
+                        {
+                            <tr>
+                                <td class="px-4 py-3 text-sm text-[var(--text)]">@login.ProviderDisplayName</td>
+                                <td class="px-4 py-3">
+                                    @if (_showRemoveButton)
+                                    {
+                                        <form @formname="@($"remove-login-{login.LoginProvider}")"
+                                              @onsubmit="OnSubmitAsync"
+                                              method="post"
+                                              class="inline">
+                                            <AntiforgeryToken />
+                                            <input type="hidden" name="@nameof(LoginProvider)" value="@login.LoginProvider" />
+                                            <input type="hidden" name="@nameof(ProviderKey)" value="@login.ProviderKey" />
+                                            <button type="submit"
+                                                    class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-contrast)]
+                                                           bg-[var(--reset)] hover:bg-[#b30000] focus:outline-none focus:ring-2 focus:ring-[var(--reset)]"
+                                                    title="Remove this @login.ProviderDisplayName login from your account">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-sm text-[var(--text)]">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (_otherLogins?.Count > 0)
+    {
+        <div class="pt-4">
+            <h4 class="text-md font-medium text-[var(--text)] mb-3">Add another service to sign in</h4>
+
+            <form class="space-y-3"
+                  action="Account/Manage/LinkExternalLogin"
+                  method="post">
+                <AntiforgeryToken />
+                <div class="flex flex-wrap gap-3">
+                    @foreach (var provider in _otherLogins)
+                    {
+                        <button type="submit"
+                                name="Provider"
+                                value="@provider.Name"
+                                title="Log in using your @provider.DisplayName account"
+                                class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-contrast)]
+                                       bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">
+                            @provider.DisplayName
+                        </button>
+                    }
+                </div>
+            </form>
+        </div>
+    }
+</section>
+
+@code {
+    public const string LinkLoginCallbackAction = "LinkLoginCallback";
+
+    private ApplicationUser _user = default!;
+    private IList<UserLoginInfo>? _currentLogins;
+    private IList<AuthenticationScheme>? _otherLogins;
+    private bool _showRemoveButton;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm] private string? LoginProvider { get; set; }
+    [SupplyParameterFromForm] private string? ProviderKey { get; set; }
+    [SupplyParameterFromQuery] private string? Action { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+        _currentLogins = await UserManager.GetLoginsAsync(_user);
+        _otherLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync())
+            .Where(auth => _currentLogins.All(ul => auth.Name != ul.LoginProvider))
+            .ToList();
+
+        string? passwordHash = null;
+        if (UserStore is IUserPasswordStore<ApplicationUser> userPasswordStore)
+        {
+            passwordHash = await userPasswordStore.GetPasswordHashAsync(_user, HttpContext.RequestAborted);
+        }
+
+        // Show "Remove" if user has a password or more than one external login
+        _showRemoveButton = passwordHash is not null || _currentLogins.Count > 1;
+
+        // Handle callback flow
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && Action == LinkLoginCallbackAction)
+        {
+            await OnGetLinkLoginCallbackAsync();
+        }
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        var result = await UserManager.RemoveLoginAsync(_user, LoginProvider!, ProviderKey!);
+        if (!result.Succeeded)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus("Error: The external login was not removed.", HttpContext);
+        }
+
+        await SignInManager.RefreshSignInAsync(_user);
+        RedirectManager.RedirectToCurrentPageWithStatus("The external login was removed.", HttpContext);
+    }
+
+    private async Task OnGetLinkLoginCallbackAsync()
+    {
+        var userId = await UserManager.GetUserIdAsync(_user);
+        var info = await SignInManager.GetExternalLoginInfoAsync(userId);
+        if (info is null)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus("Error: Could not load external login info.", HttpContext);
+        }
+
+        var result = await UserManager.AddLoginAsync(_user, info);
+        if (!result.Succeeded)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus("Error: The external login was not added. External logins can only be associated with one account.", HttpContext);
+        }
+
+        // Clear the existing external cookie to ensure a clean login process
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        RedirectManager.RedirectToCurrentPageWithStatus("The external login was added.", HttpContext);
+    }
+}

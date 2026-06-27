@@ -1,0 +1,135 @@
+﻿@page "/Account/RegisterConfirmation"
+
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Register confirmation</PageTitle>
+
+<section class="bg-[var(--background)] min-h-screen flex items-center">
+    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto w-full">
+        <div class="w-full bg-[var(--section)] rounded-lg shadow-lg md:mt-0 sm:max-w-md xl:p-0 ring-1 ring-[var(--main)]">
+            <div class="p-6 space-y-4 md:space-y-6 sm:p-8 text-center">
+                <div class="flex flex-col items-center space-y-4">
+                    @if (_statusMessage?.StartsWith("Confirmation email sent") == true)
+                    {
+                        <!-- Success icon -->
+                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--section-secondary)] border-2 border-[var(--success)]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[var(--success)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m0 0v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8m18 0L12 13 3 8" />
+                            </svg>
+                        </div>
+
+                        <h1 class="text-2xl font-bold text-[var(--text)]">Confirmation email sent</h1>
+                        <p class="text-sm text-[var(--text)] max-w-md" role="alert">
+                            @_statusMessage
+                        </p>
+                        @if (!string.IsNullOrWhiteSpace(Email))
+                        {
+                            <p class="text-sm text-[var(--text)] max-w-md">
+                                We sent the link to <strong>@Email</strong>. If it's not in your inbox, check the spam folder.
+                            </p>
+                        }
+                    }
+                    else if (_statusMessage is not null)
+                    {
+                        <!-- Error icon -->
+                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--section-secondary)] border-2 border-[var(--error)]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[var(--error)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+
+                        <h1 class="text-2xl font-bold text-[var(--error)]">Couldn't send confirmation email</h1>
+                        <p class="text-sm text-[var(--text)] max-w-md" role="alert">
+                            @_statusMessage
+                        </p>
+                    }
+                    else
+                    {
+                        <!-- Loading state -->
+                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--section-secondary)] animate-pulse">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[var(--text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+
+                        <h1 class="text-2xl font-bold text-[var(--text)]">Preparing your confirmation...</h1>
+                    }
+                </div>
+
+                @if (_statusMessage is not null)
+                {
+                    <div class="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+                        <a href="/"
+                           class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-[var(--text-contrast)]
+                                  bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">
+                            Return to home
+                        </a>
+                        <a href="/Account/Login"
+                           class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-[var(--main)]
+                                  bg-transparent border border-[var(--main)] hover:bg-[var(--section-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">
+                            Go to login
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private string? _emailConfirmationLink;
+    private string? _statusMessage;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery] private string? Email { get; set; }
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Email is null)
+        {
+            RedirectManager.RedirectTo("");
+            return;
+        }
+
+        var normalized = UserManager.NormalizeEmail(Email);
+        var user = await UserManager.FindByEmailAsync(normalized);
+
+        if (user is null)
+        {
+            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            _statusMessage = "Error: User not found for the provided email.";
+            return;
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
+        _emailConfirmationLink = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?>
+            {
+                ["userId"] = userId,
+                ["code"] = encoded,
+                ["returnUrl"] = ReturnUrl
+            });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Email, HtmlEncoder.Default.Encode(_emailConfirmationLink));
+
+        _statusMessage = "Confirmation email sent. Please check your inbox.";
+    }
+}

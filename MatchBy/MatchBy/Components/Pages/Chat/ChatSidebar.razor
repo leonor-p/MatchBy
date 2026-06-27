@@ -1,0 +1,130 @@
+﻿@using MatchBy.DTOs.Chat.Conversations
+@using Blazorise
+
+<!-- Sidebar -->
+<aside class="h-full max-h-full flex flex-col @Class overflow-hidden"
+       style="background-color: var(--background);">
+    <!-- header -->
+    <div class="px-2.5 sm:px-3 md:px-4 pt-2.5 sm:pt-3 pb-2 flex-shrink-0">
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm sm:text-[15px] font-semibold truncate" style="color: var(--text);">Chats</h2>
+            <Button class="p-1 sm:p-1.5 rounded hover:opacity-70 active:opacity-50 transition-opacity touch-manipulation flex-shrink-0" 
+                    Clicked="@OnShowModal"
+                    Style="color: var(--text);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 20" fill="currentColor"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="size-3.5 sm:size-4 opacity-60 lucide lucide-user-plus-icon lucide-user-plus">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="19" x2="19" y1="8" y2="14"/>
+                    <line x1="22" x2="16" y1="11" y2="11"/>
+                </svg>
+            </Button>
+        </div>
+
+        <!-- search -->
+        <label class="relative mt-2 block">
+            <TextEdit @bind-Text="_search"
+                      Placeholder="Search for contacts"
+                      Role="TextRole.Search"
+                      KeyDown="OnSearchKeyDown"
+                      Class="w-full rounded-lg border pl-8 sm:pl-9 pr-2.5 sm:pr-3 py-1.5 sm:py-2 text-xs sm:text-sm outline-none focus:ring-2 transition-all"
+                      Style="background-color: var(--section-secondary); color: var(--text); border-color: var(--main); placeholder-color: var(--text);"/>
+            <svg class="size-4 sm:size-5 absolute left-2 sm:left-2.5 top-1.5 sm:top-2 opacity-50"
+                 style="color: var(--text);"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="m21 21-4.3-4.3m0-6.2a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/>
+            </svg>
+        </label>
+    </div>
+
+    <!-- list -->
+    <nav class="flex-1 overflow-y-auto thin-scroll px-1.5 sm:px-2 pb-2 sm:pb-3 space-y-3 sm:space-y-4 min-h-0">
+
+        @{
+            var privateConversations = Conversations.Where(c => c.Type == ConversationType.Private).ToList();
+            var matchConversations = Conversations.Where(c => c.Type == ConversationType.Match).ToList();
+            var teamConversations = Conversations.Where(c => c.Type == ConversationType.Team).ToList();
+        }
+        @if (privateConversations.Any())
+        {
+            <!-- PRIVATE CONVERSATIONS -->
+            <div>
+                <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide opacity-60"
+                     style="color: var(--text);">
+                    Private conversations
+                </div>
+                @foreach (var privateConversation in privateConversations.OrderByDescending(c => c.LastMessageAtUtc))
+                {
+                    <ConversationSideBarItem Conversation="@privateConversation"
+                                             OnConversationSelected="OnConversationSelected"
+                                             CurrentUserId="@CurrentUserId"/>
+                }
+            </div>
+        }
+
+        @if (matchConversations.Any())
+        {
+            <!-- MATCH CONVERSATIONS -->
+            <div>
+                <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide opacity-60"
+                     style="color: var(--text);">
+                    Match conversations
+                </div>
+                @foreach (var matchConversation in matchConversations.OrderByDescending(c => c.LastMessageAtUtc))
+                {
+                    <ConversationSideBarItem Conversation="@matchConversation"
+                                             OnConversationSelected="OnConversationSelected"
+                                             CurrentUserId="@CurrentUserId"/>
+                }
+            </div>
+        }
+
+        @if (teamConversations.Any())
+        {
+            <!-- TEAM CONVERSATIONS -->
+            <div>
+                <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide opacity-60"
+                     style="color: var(--text);">
+                    Team conversations
+                </div>
+                @foreach (var teamConversation in teamConversations.OrderByDescending(c => c.LastMessageAtUtc))
+                {
+                    <ConversationSideBarItem Conversation="@teamConversation"
+                                             OnConversationSelected="OnConversationSelected"
+                                             CurrentUserId="@CurrentUserId"/>
+                }
+            </div>
+        }
+    </nav>
+    @if (!string.IsNullOrEmpty(NextCursor))
+    {
+        <div class="flex-shrink-0 border-t border-[var(--main)] pt-2">
+            <CursorPagination NextCursor="@NextCursor" OnNext="OnNextPagination"></CursorPagination>
+        </div>
+    }
+</aside>
+
+@code
+{
+    private string _search = "";
+    [Parameter] public List<ConversationDto> Conversations { get; set; } = [];
+    [Parameter] public EventCallback<ConversationDto> OnConversationSelected { get; set; }
+    [Parameter] public required string CurrentUserId { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnShowModal { get; set; }
+    [Parameter] public EventCallback<(string?, string?)> OnNext { get; set; }
+    [Parameter] public EventCallback<string?> OnSearch { get; set; }
+    [Parameter] public string? NextCursor { get; set; }
+    [Parameter] public string? Class { get; set; }
+    
+    public void OnNextPagination(string? cursor) => OnNext.InvokeAsync((cursor, _search));
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await OnSearch.InvokeAsync(_search);
+        }
+    }
+}

@@ -1,0 +1,601 @@
+﻿@page "/chat"
+@page "/chat/{conversationId}"
+@layout ChatLayout
+
+@using FluentValidation
+@using MatchBy.DTOs.Chat.Conversations
+@using MatchBy.DTOs.Chat.Messages
+@using MatchBy.Services.ChatMessages
+@using MatchBy.Services.Conversations
+@using MatchBy.Services.Users
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using MatchBy.Hubs
+@using MatchBy.Components.Layout
+@using Blazorise
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider Auth
+@inject IConversationService ConversationService
+@inject IChatMessageService ChatMessageService
+@inject IUsersService UsersService
+@inject ChatState State
+@inject NavigationManager NavigationManager
+@inject IValidator<CreateChatMessageDto> CreateChatMessageDtoValidator
+@inject IValidator<UpdateChatMessageDto> UpdateChatMessageDtoValidator
+@inject IValidator<CreateConversationDto> CreateConversationDtoValidator
+@inject IValidator<UpdateConversationDto> UpdateConversationDtoValidator
+@inject IToastService ToastService
+
+<div class="flex flex-1 min-h-0 overflow-hidden">
+    <!-- Sidebar Desktop -->
+    <div class="hidden md:flex md:flex-col w-64 lg:w-72 xl:w-80 border-r border-[var(--main)] overflow-hidden">
+        <ChatSidebar
+            Class="flex flex-col h-full overflow-hidden"
+            Conversations="State.Conversations"
+            OnConversationSelected="OnConversationSelected"
+            OnShowModal="ShowModal"
+            OnNext="LoadMoreConversations"
+            NextCursor="@State.NextConversationCursor"
+            CurrentUserId="@State.UserId"
+            OnSearch="SearchConversations"/>
+    </div>
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        @if (State.Selected is null)
+        {
+            <ChatEmptyState/>
+        }
+        else
+        {
+            <ChatHeader
+                Conversation="State.Selected"
+                OnOpenInfo="ShowOffcanvas"
+                CurrentUserId="@State.UserId"/>
+
+            <!-- Messages Container with isolated scroll -->
+            <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <MessageList
+                    ChatMessages="@State.MessagesOfSelectedConversation"
+                    CurrentUserId="@State.UserId"
+                    OnEdit="OnEditMessage"
+                    OnReply="OnReplyToMessage"
+                    OnDelete="OnDeleteMessage"
+                    OnNext="LoadMoreMessages"
+                    NextCursor="@State.NextChatMessagesCursor"/>
+            </div>
+
+            <ChatFooter
+                Text="@_messageText"
+                TextChanged="v => _messageText = v"
+                ReplyTo="@_replyToMessage"
+                OnCancelReply="CancelReply"
+                OnSend="HandleSubmit"
+                OnShareLocation="ShareLocation"/>
+        }
+    </main>
+</div>
+
+<!-- Mobile Sidebar Button -->
+<Button Clicked="@ShowSidebarOffcanvas"
+        Class="md:hidden fixed bottom-20 left-4 z-50 rounded-full !p-3 bg-[var(--main)] text-[var(--text-contrast)] shadow-lg hover:scale-105 transition-transform">
+    <Icon Name="IconName.List" Size="IconSize.Small"/>
+</Button>
+
+<!-- Offcanvas mobile (< md) -->
+<Offcanvas @ref="_sidebarOffcanvas"
+           Placement="Placement.Start"
+           ShowBackdrop
+           Style="border-right: 1px solid var(--main); background-color: var(--background); width: min(85vw, 320px);">
+    <OffcanvasBody Class="!p-0 flex flex-col h-full max-h-full overflow-hidden">
+        <ChatSidebar Class="w-full h-full max-h-full flex flex-col overflow-hidden"
+                     Conversations="State.Conversations"
+                     OnConversationSelected="OnConversationSelectedMobile"
+                     OnShowModal="ShowModal"
+                     OnNext="LoadMoreConversations"
+                     NextCursor="@State.NextConversationCursor"
+                     CurrentUserId="@State.UserId"
+                     OnSearch="SearchConversations"/>
+    </OffcanvasBody>
+</Offcanvas>
+
+@if (State.Selected is not null)
+{
+    <ConversationInfoOffcanvas @ref="_offcanvas"
+                               SelectedConversation="@State.Selected"
+                               OnLeaveConversation="LeaveConversation"
+                               OnDeleteConversation="DeleteConversation"
+                               OnImageSubmit="OnUpdateConversation"
+                               CurrentUserId="@State.UserId"/>
+}
+
+<NewConversationModal @ref="_modal"
+                      OnCreate="StartChat"
+                      OnGetUsers="GetUsers"
+                      Users="@_allUsers"/>
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
+
+
+@code{
+    [Parameter] public string? ConversationId { get; set; }
+    
+    private async Task ShowSidebarOffcanvas() => await _sidebarOffcanvas.Show();
+    private async Task HideSidebarOffcanvas() => await _sidebarOffcanvas.Hide();
+
+    private async Task OnConversationSelectedMobile(ConversationDto conversation)
+    {
+        await OnConversationSelected(conversation);
+        await HideSidebarOffcanvas();
+    }
+
+    private Offcanvas _sidebarOffcanvas = default!;
+    private ConversationInfoOffcanvas _offcanvas = default!;
+    private NewConversationModal _modal = default!;
+    private string? _messageText;
+    private ChatMessageDto? _replyToMessage;
+    private PaginationResponse<List<ApplicationUser>> _allUsers = new();
+
+    // SignalR Hub Connection
+    private HubConnection? _hubConnection;
+    private bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += (_, _) => StateHasChanged();
+        var user = (await Auth.GetAuthenticationStateAsync()).User;
+        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+        if (userId is null) return;
+
+        State.InitUser(userId);
+        var conversations = await ConversationService.GetConversationsAsync(userId, 10, null, null, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error(conversations.ErrorMessages.ToString());
+        }
+
+        State.AddConversations(conversations.Data!);
+        
+        if (!string.IsNullOrEmpty(ConversationId))
+        {
+            var selectedConversation = State.Conversations.FirstOrDefault(c => c.Id == ConversationId);
+            if (selectedConversation is not null)
+            {
+                await OnConversationSelected(selectedConversation);
+            }
+        }
+
+        // Load all users except the current user
+        await GetUsers(new NewConversationModal.UsersQuery("", 1, 4));
+    }
+
+    public async Task SearchConversations(string? search)
+    {
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 10, null, search, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error(conversations.ErrorMessages.ToString());
+            return;
+        }
+
+        State.ClearConversations();
+        State.AddConversations(conversations.Data!);
+    }
+
+    public async Task LoadMoreConversations((string? nextCursor, string? search) args)
+    {
+        var (nextCursor, search) = args;
+        if (string.IsNullOrEmpty(nextCursor)) return;
+
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 10, nextCursor, search, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error(conversations.ErrorMessages.ToString());
+            return;
+        }
+
+        State.AddConversations(conversations.Data!);
+    }
+
+    public async Task LoadMoreMessages(string? nextCursor)
+    {
+        if (State.Selected is null || string.IsNullOrEmpty(nextCursor)) return;
+
+        var messagesResult = await ChatMessageService.GetChatMessagesAsync(State.Selected.Id, State.UserId, 10, nextCursor, CancellationToken.None);
+        if (!messagesResult.Success)
+        {
+            await ToastService.Error(messagesResult.ErrorMessages.ToString());
+            return;
+        }
+
+        State.AddMessages(messagesResult.Data!);
+    }
+
+    private async Task GetUsers(NewConversationModal.UsersQuery usersQuery)
+    {
+        var response = await UsersService.GetUsers(usersQuery.q, usersQuery.page, usersQuery.pageSize);
+        if (response.Success)
+        {
+            _allUsers = response.Data!;
+        }
+        else
+        {
+            await ToastService.Error(response.ErrorMessages.ToString());
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/chat"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<Result<ChatMessageDto>>("MessageCreated", result =>
+        {
+            return InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    State.UpsertMessage(result.Data!);
+                }
+                else
+                {
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ChatMessageDto>>("MessageUpdated", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Updated message via SignalR: {result.Data!.Content}");
+                    State.UpsertMessage(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to update message: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ChatHub.MessageDeletedDto>>("MessageDeleted", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Deleted message via SignalR: {result.Data!.MessageId}");
+                    State.RemoveMessage(result.Data!.Conversation, result.Data!.MessageId);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to delete message: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationCreated", result =>
+        {
+            InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Received conversation via SignalR: {result.Data!.Title}");
+                    State.Conversations.Add(result.Data!);
+                    await OnConversationSelected(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to create conversation: {string.Join(", ", result.ErrorMessages)}");
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationUpdated", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Updated conversation via SignalR: {result.Data!.Title}");
+                    State.UpdateConversation(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to update conversation: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<string>>("ConversationDeleted", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    var conversationId = result.Data!;
+
+                    Console.WriteLine($"Deleted conversation via SignalR: {conversationId}");
+                    State.RemoveConversation(conversationId);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to delete conversation: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationLeft", result =>
+        {
+            InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Left conversation via SignalR: {result.Data!.Id}");
+
+                    if (result.Data!.Participants.All(p => p.Id != State.UserId))
+                    {
+                        State.RemoveConversation(result.Data!.Id);
+                    }
+                    else
+                    {
+                        State.UpdateConversation(result.Data!);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to leave conversation: {string.Join(", ", result.ErrorMessages)}");
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.Closed += error =>
+        {
+            Console.WriteLine($"Connection closed: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnecting += error =>
+        {
+            Console.WriteLine($"Connection reconnecting: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnected += async connectionId =>
+        {
+            Console.WriteLine($"Connection reconnected: {connectionId}");
+            await JoinAllConversations();
+        };
+
+        try
+        {
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("Register", State.UserId);
+            await JoinAllConversations();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to SignalR: {ex.Message}");
+        }
+    }
+
+    private async Task JoinAllConversations()
+    {
+        if (!IsConnected || _hubConnection is null) return;
+
+        var tasks = State.Conversations.Select(conv => _hubConnection.InvokeAsync("JoinConversation", conv.Id)).ToList();
+
+        if (tasks.Count > 0)
+            await Task.WhenAll(tasks);
+    }
+
+    private Task ShowOffcanvas() => _offcanvas.Show();
+    private Task ShowModal() => _modal.Show();
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(_messageText) || State.Selected is null) return;
+
+        CreateChatMessageDto createChatMessageDto = new()
+        {
+            Content = _messageText,
+            CreatorUserId = State.UserId,
+            ConversationId = State.Selected.Id,
+            ReplyToMessageId = _replyToMessage?.Id,
+            Location = null,
+            InviteUrl = null
+        };
+
+        var result = await CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("CreateMessage", createChatMessageDto);
+        }
+
+        _messageText = null;
+        _replyToMessage = null;
+    }
+
+    private async Task ShareLocation((double Latitude, double Longitude) location)
+    {
+        if (State.Selected is null) return;
+
+        CreateChatMessageDto createChatMessageDto = new()
+        {
+            CreatorUserId = State.UserId,
+            ConversationId = State.Selected.Id,
+            ReplyToMessageId = _replyToMessage?.Id,
+            Location = new Location(location.Latitude,
+                location.Longitude,
+                string.Empty,
+                string.Empty),
+            InviteUrl = null,
+            Content = null
+        };
+
+        var result = await CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("CreateMessage", createChatMessageDto);
+        }
+
+        _replyToMessage = null;
+    }
+
+    private async Task OnEditMessage(UpdateChatMessageDto msg)
+    {
+        var result = await UpdateChatMessageDtoValidator.ValidateAsync(msg);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("UpdateMessage", msg);
+        }
+    }
+
+    private async Task OnDeleteMessage(ChatMessageDto msg)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("DeleteMessage", msg.Id);
+        }
+    }
+
+    private Task OnReplyToMessage(ChatMessageDto msg)
+    {
+        _replyToMessage = msg;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelReply()
+    {
+        _replyToMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task StartChat(string otherUserId)
+    {
+        var createConversationDto = new CreateConversationDto
+        {
+            CreatorUserId = State.UserId,
+            ConversationType = ConversationType.Private,
+            ParticipantIds = [otherUserId, State.UserId],
+            TeamId = null,
+            MatchId = null,
+            Title = null
+        };
+
+        var result = await CreateConversationDtoValidator.ValidateAsync(createConversationDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Conversation validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("CreateConversation", createConversationDto);
+        }
+    }
+
+    private async Task LeaveConversation()
+    {
+        var id = State.Selected?.Id;
+        if (id is null) return;
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("LeaveConversationAndNotify", id);
+        }
+    }
+
+    private async Task DeleteConversation()
+    {
+        var id = State.Selected?.Id;
+        if (id is null) return;
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("DeleteConversation", id);
+        }
+    }
+
+    public async Task OnConversationSelected(ConversationDto conversation)
+    {
+        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId, 10, State.NextChatMessagesCursor, CancellationToken.None);
+        if (!messages.Success)
+        {
+            await ToastService.Error(messages.ErrorMessages.FirstOrDefault() ?? "Failed to load messages for the selected conversation.");
+            return;
+        }
+
+        State.Select(conversation, messages.Data!);
+    }
+
+    public async Task OnUpdateConversation(UpdateConversationDto updateConversationDto)
+    {
+        if (State.Selected is null)
+        {
+            await ToastService.Error("No conversation selected.");
+            return;
+        }
+
+        var result = await UpdateConversationDtoValidator.ValidateAsync(updateConversationDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Conversation validation failed.");
+            return;
+        }
+
+        var conv = await ConversationService.UpdateConversationAsync(updateConversationDto);
+        if (!conv.Success)
+        {
+            Console.WriteLine(conv.ErrorMessages.ToString());
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("UpdateConversation", updateConversationDto.ConversationId, updateConversationDto.CreatorUserId);
+        }
+
+        State.UpdateConversation(conv.Data!);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+}
