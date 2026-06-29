@@ -171,9 +171,7 @@ builder.Services
     .AddBlazorise(options =>
     {
         options.Immediate = true;
-        options.ProductToken = builder.Configuration["Blazorise:ProductToken"] ??
-                               throw new InvalidOperationException(
-                                   "Blazorise product token not found in configuration.");
+        options.ProductToken = builder.Configuration["Blazorise:ProductToken"] ?? string.Empty;
     })
     .AddTailwindProviders()
     .AddFontAwesomeIcons()
