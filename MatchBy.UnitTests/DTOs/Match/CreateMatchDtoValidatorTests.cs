@@ -13,7 +13,10 @@ public class CreateMatchDtoValidatorTests
     {
         return new CreateMatchDto
         {
-            Location = new Location(40.7128, -74.0060, "New York", "USA"),
+            Location = new Location(40.7128,
+                -74.0060,
+                "New York",
+                "USA"),
             Address = "123 Main St, New York, NY",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(7),
             Description = "Friendly football match",
@@ -21,7 +24,8 @@ public class CreateMatchDtoValidatorTests
             MaxPlayers = 10,
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            CreatorId = "creator_123"
+            CreatorId = "creator_123",
+            MinimumPlayersRating = MinimumPlayersAverage.All
         };
     }
 
@@ -292,14 +296,14 @@ public class CreateMatchDtoValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.MatchDateTimeUtc)
-              .WithErrorMessage("Match date and time must be in the future.");
+              .WithErrorMessage("Match must be scheduled at least 7 days in the future.");
     }
 
     [Fact]
     public void Validate_MatchDateTimeInFuture_ShouldNotHaveValidationError()
     {
         // Arrange
-        CreateMatchDto dto = CreateValidDto() with { MatchDateTimeUtc = DateTime.UtcNow.AddHours(1) };
+        CreateMatchDto dto = CreateValidDto() with { MatchDateTimeUtc = DateTime.UtcNow.AddDays(7).AddHours(1) };
 
         // Act
         TestValidationResult<CreateMatchDto>? result = _validator.TestValidate(dto);

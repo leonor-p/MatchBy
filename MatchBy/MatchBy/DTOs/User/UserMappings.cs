@@ -9,9 +9,13 @@ public static class UserMappings
         return new UserDto
         {
             Id = user.Id,
-            DisplayName = user.UserName!,
-            AvatarUrl = user.ProfileImage?.Url,
-            PlayerRating = user.Rating > 0 ? user.Rating : null
+            UserName = user.UserName!,
+            DisplayName = user.DisplayName,
+            AvatarUrl = user.ProfileImage == null ? "/images/user-avatar.svg" : user.ProfileImage.Url,
+            PlayerRating = user.Rating,
+            PreferredSports = [..user.PreferredSports],
+            JoinedMatchesCount = user.JoinedMatches.Count,
+            Bio = user.Bio
         };
     }
 }

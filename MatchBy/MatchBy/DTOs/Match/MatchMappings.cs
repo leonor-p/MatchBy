@@ -17,8 +17,10 @@ public static class MatchMappings
             Address = match.Address,
             MatchDateTimeUtc = match.MatchDateTimeUtc,
             Description = match.Description,
-            MinPlayers = match.minPlayers,
-            MaxPlayers = match.maxPlayers,
+            MinPlayers = match.MinPlayers,
+            MaxPlayers = match.MaxPlayers,
+            MinimumPlayersRating = match.MinimumPlayersRating,
+            AveragePlayersRating = list.Select(u => u.PlayerRating).Any() ? (MinimumPlayersAverage)Convert.ToInt16(Math.Round(list.Average(u => u.PlayerRating), 2)) : MinimumPlayersAverage.All,
             Sport = match.Sport,
             Status = match.Status,
             Privacy = match.Privacy,
@@ -28,7 +30,6 @@ public static class MatchMappings
             Participants = list,
             CreatedAtUtc = match.CreatedAtUtc,
             UpdatedAtUtc = match.UpdatedAtUtc,
-            DeletedAtUtc = match.DeletedAtUtc
         };
     }
 
@@ -41,8 +42,9 @@ public static class MatchMappings
             Address = createMatchDto.Address,
             MatchDateTimeUtc = DateTime.SpecifyKind(createMatchDto.MatchDateTimeUtc, DateTimeKind.Utc),
             Description = createMatchDto.Description,
-            minPlayers = createMatchDto.MinPlayers,
-            maxPlayers = createMatchDto.MaxPlayers,
+            MinPlayers = createMatchDto.MinPlayers,
+            MaxPlayers = createMatchDto.MaxPlayers,
+            MinimumPlayersRating = createMatchDto.MinimumPlayersRating,
             Sport = createMatchDto.Sport,
             Status = MatchStatus.Pendent, // New matches are always created with Pendent status
             Privacy = createMatchDto.Privacy,
@@ -50,7 +52,6 @@ public static class MatchMappings
             Participants = [],
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
         };
     }
 
@@ -60,8 +61,9 @@ public static class MatchMappings
         match.Address = updateMatchDto.Address;
         match.MatchDateTimeUtc = DateTime.SpecifyKind(updateMatchDto.MatchDateTimeUtc, DateTimeKind.Utc);
         match.Description = updateMatchDto.Description;
-        match.minPlayers = updateMatchDto.MinPlayers;
-        match.maxPlayers = updateMatchDto.MaxPlayers;
+        match.MinPlayers = updateMatchDto.MinPlayers;
+        match.MaxPlayers = updateMatchDto.MaxPlayers;
+        match.MinimumPlayersRating = updateMatchDto.MinimumPlayersRating;
         match.Sport = updateMatchDto.Sport;
         match.Privacy = updateMatchDto.Privacy;
         match.UpdatedAtUtc = DateTime.UtcNow;

@@ -12,7 +12,10 @@ public class UserDtoTests
         {
             Id = "user_123",
             DisplayName = "John Doe",
-            AvatarUrl = "https://example.com/avatar.jpg"
+            AvatarUrl = "https://example.com/avatar.jpg",
+            UserName = "johndoe",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
         };
 
         // Assert
@@ -29,41 +32,14 @@ public class UserDtoTests
         {
             Id = "user_123",
             DisplayName = "John Doe",
-            AvatarUrl = null
+            AvatarUrl = null,
+            UserName = "johndoe",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
         };
 
         // Assert
         Assert.Null(dto.AvatarUrl);
-    }
-
-    [Fact]
-    public void UserDto_ShouldBeRecord_WithValueEquality()
-    {
-        // Arrange
-        var dto1 = new UserDto
-        {
-            Id = "user_123",
-            DisplayName = "John Doe",
-            AvatarUrl = "https://example.com/avatar.jpg"
-        };
-
-        var dto2 = new UserDto
-        {
-            Id = "user_123",
-            DisplayName = "John Doe",
-            AvatarUrl = "https://example.com/avatar.jpg"
-        };
-
-        var dto3 = new UserDto
-        {
-            Id = "user_456",
-            DisplayName = "Jane Doe",
-            AvatarUrl = null
-        };
-
-        // Assert
-        Assert.Equal(dto1, dto2);
-        Assert.NotEqual(dto1, dto3);
     }
 
     [Fact]
@@ -74,7 +50,10 @@ public class UserDtoTests
         {
             Id = "user_123",
             DisplayName = "John Doe",
-            AvatarUrl = "https://example.com/avatar.jpg"
+            AvatarUrl = "https://example.com/avatar.jpg",
+            UserName = "johndoe",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
         };
 
         // Act

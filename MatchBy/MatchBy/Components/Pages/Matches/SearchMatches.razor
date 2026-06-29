@@ -1,0 +1,348 @@
+﻿@using System.ComponentModel
+@using Blazorise
+@using MatchBy.DTOs.Match
+@using MatchBy.Services.Matches
+@using Microsoft.AspNetCore.Identity
+@inject IMatchesService MatchesService
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider Auth
+@inject IJSRuntime Js
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
+@implements IDisposable
+@if (_viewModel is null)
+{
+    <div class="min-h-screen flex items-center justify-center bg-[var(--background)]">
+        <Loading></Loading>
+    </div>
+}
+else
+{   
+    var viewModel = _viewModel!;
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Filters Section -->
+        <div class="rounded-xl border border-[var(--main)] p-6 mb-8 bg-[var(--section-secondary)]">
+            <div class="flex justify-between items-center mb-4 w-full">
+                <h3 class="text-xl font-bold text-[var(--text)]">Filter Matches by Sport</h3>
+
+                <button @onclick="viewModel.ToggleFilters"
+                        class="group px-4 py-2 text-sm bg-[var(--main)] text-[var(--text-contrast)] rounded-lg hover:bg-[var(--main-hover)] hover:text-[var(--text)] flex items-center gap-2">
+                        <span>
+                            @(viewModel.FiltersOpen ? "Hide filters" : "Show more filters")
+                        </span>
+
+                    @if (viewModel.FiltersOpen)
+                    {
+                        <svg class="w-4 h-4 text-[var(--text-contrast)] group-hover:text-[var(--text)]"
+                             aria-hidden="true"
+                             xmlns="http://www.w3.org/2000/svg"
+                             width="24" height="24" fill="none"
+                             viewBox="0 0 24 24">
+                            <path stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="m5 15 7-7 7 7"/>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg class="w-4 h-4 text-[var(--text-contrast)] group-hover:text-[var(--text)]"
+                             aria-hidden="true"
+                             xmlns="http://www.w3.org/2000/svg"
+                             width="24" height="24" fill="none"
+                             viewBox="0 0 24 24">
+                            <path stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="m19 9-7 7-7-7"/>
+                        </svg>
+                    }
+                </button>
+            </div>
+
+            <div class="flex flex-wrap gap-4 w-full">
+                @foreach (var sport in Enum.GetValues<Sports>())
+                {
+                    var isSelected = viewModel.SelectedSports.Contains(sport);
+
+                    <button type="button"
+                            role="button"
+                            class="@(
+                                   isSelected
+                                       ? "px-4 py-2 bg-[var(--main)] text-[var(--text-contrast)] rounded-xl font-bold hover:bg-[var(--main-hover)] hover:text-[var(--text)]"
+                                       : "px-4 py-2 text-[var(--text)] rounded-xl border-1 border-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)]"
+                                   )"
+                            onclick="@(async () => await viewModel.ToggleSport(sport))">
+                        @sport
+                    </button>
+                }
+            </div>
+
+            @if (viewModel.FiltersOpen)
+            {
+                <div class="mt-4 bg-[var(--main)] h-[2px] transition duration-200 ease-out"></div>
+
+                <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full">
+                    <div class="flex flex-col w-full lg:w-1/3">
+                        <label class="font-medium mb-2 text-[var(--text)]">Country:</label>
+
+                        <Select TValue="string"
+                                SelectedValue="@viewModel.SelectedCountry"
+                                SelectedValueChanged="@(async v => await viewModel.OnCountryChanged(v))"
+                                Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+
+                            <SelectItem Value="@string.Empty">Select match country</SelectItem>
+
+                            @foreach (var c in viewModel.Countries)
+                            {
+                                <SelectItem Value="@c">@c</SelectItem>
+                            }
+                        </Select>
+                    </div>
+
+                    <div class="flex flex-col w-full lg:w-1/3">
+                        <label class="font-medium mb-2 text-[var(--text)]">City:</label>
+
+                        <Select TValue="string"
+                                @bind-SelectedValue="@viewModel.SelectedCity"
+                                Disabled="@(!viewModel.Cities.Any())"
+                                Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+
+                            <SelectItem Value="@string.Empty">
+                                @(viewModel.Cities.Any() ? "Select match city" : "Select country first")
+                            </SelectItem>
+
+                            @foreach (var city in viewModel.Cities)
+                            {
+                                <SelectItem Value="@city">@city</SelectItem>
+                            }
+                        </Select>
+                    </div>
+
+                    <div class="flex flex-col w-full lg:w-1/3 -mt-4">
+                        @if (viewModel.IsGeolocationEnabled)
+                        {
+                            <label
+                                class="font-medium text-[var(--text)]">@(viewModel.DistanceFilterUsed ? $"Max Distance: {viewModel.MaxDistanceKm} km" : "Max Distance: ∞")</label>
+                            <Slider Min="5" Max="55"
+                                    Step="5"
+                                    TValue="int"
+                                    @bind-Value="viewModel.MaxDistanceKm"
+                                    Disabled="@(!viewModel.IsGeolocationEnabled)"
+                                    Class="w-full !mt-5 !bg-[var(--main)]"/>
+                        }
+                        else
+                        {
+                            <label class="font-medium text-[var(--error)]">Geolocation Disabled - Distance Filter
+                                Unavailable</label>
+                            <Slider Min="5" Max="55"
+                                    Step="5"
+                                    TValue="int"
+                                    @bind-Value="_viewModel.MaxDistanceKm"
+                                    Disabled="@(!viewModel.IsGeolocationEnabled)"
+                                    Class="w-full !mt-5"/>
+                        }
+                    </div>
+                </div>
+
+                <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full">
+                    <div class="flex flex-col w-full lg:w-1/3">
+                        <label class="font-medium mb-2 text-[var(--text)]">Status:</label>
+
+                        <Select TValue="int"
+                                @bind-SelectedValue="@viewModel.SelectedStatus"
+                                Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+                            <SelectItem Value="@((int)Status.Pendent)">Pendent</SelectItem>
+                            <SelectItem Value="@((int)Status.Confirmed)">Confirmed</SelectItem>
+                            <SelectItem Value="@((int)Status.Completed)">Completed</SelectItem>
+                            <SelectItem Value="@((int)Status.Cancelled)">Cancelled</SelectItem>
+                            <SelectItem Value="@((int)Status.All)">All</SelectItem>
+                        </Select>
+                    </div>
+                    <div class="flex flex-col w-full lg:w-1/3">
+                        <label class="font-medium mb-2 text-[var(--text)]">Minimum average participant rating:</label>
+                        <Select TValue="int"
+                                @bind-SelectedValue="_viewModel.SelectedRating"
+                                Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+                            <SelectItem Value="@((int)MinimumPlayersAverage.OneStars)">1 ★</SelectItem>
+                            <SelectItem Value="@((int)MinimumPlayersAverage.TwoStars)">2 ★</SelectItem>
+                            <SelectItem Value="@((int)MinimumPlayersAverage.ThreeStars)">3 ★</SelectItem>
+                            <SelectItem Value="@((int)MinimumPlayersAverage.FourStars)">4 ★</SelectItem>
+                            <SelectItem Value="@((int)MinimumPlayersAverage.FiveStars)">5 ★</SelectItem>
+                            <SelectItem Value="@((int)MinimumPlayersAverage.All)">All Ratings</SelectItem>
+                        </Select>
+                    </div>
+                    <div class="flex flex-col w-full lg:w-1/3 -mt-3">
+                        <label class="font-medium mb-2 text-[var(--text)]">
+                            Match Hours:
+                            @viewModel.StartHour:00 -
+                            @(viewModel.EndHour == 24 ? "23:59" : $"{viewModel.EndHour}:00")
+                        </label>
+
+                        <div class="flex gap-4 items-center mt-2">
+                            <div class="flex-1">
+                                <Slider Min="0" Max="24"
+                                        Step="1"
+                                        TValue="int"
+                                        @bind-Value="@viewModel.StartHour"
+                                        Class="!bg-[var(--main)]"/>
+                            </div>
+
+                            <div class="flex-1">
+                                <Slider Min="0" Max="24"
+                                        Step="1"
+                                        TValue="int"
+                                        @bind-Value="@viewModel.EndHour"
+                                        Class="!bg-[var(--main)]"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full">
+                    <div class="flex flex-col w-full lg:w-1/3">
+                        <div class="flex gap-4 items-center gap-8">
+                            <div class="flex-1">
+                                <label class="font-medium mb-2 text-[var(--text)]">Sort by:</label>
+                                <Select TValue="int"
+                                        @bind-SelectedValue="@viewModel.SelectedSorting"
+                                        Class="!border !mt-2 !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+                                    <SelectItem Value="@((int)SortBy.MatchDateTime)">Date</SelectItem>
+                                    @if (viewModel.IsGeolocationEnabled)
+                                    {
+                                        <SelectItem Value="@((int)SortBy.Distance)">Distance</SelectItem>
+                                    }
+                                    <SelectItem Value="@((int)SortBy.PlayersAverage)">Rating</SelectItem>
+                                </Select>
+                            </div>
+
+                            <div class="flex-1">
+                                <label class="font-medium mb-2 text-[var(--text)]">Sorting order:</label>
+                                <Select TValue="int"
+                                        @bind-SelectedValue="@viewModel.SelectedSortingOrder"
+                                        Class="!border !mt-2 !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+                                    <SelectItem Value="@((int)OrderBy.Ascending)">Ascending</SelectItem>
+                                    <SelectItem Value="@((int)OrderBy.Descending)">Descending</SelectItem>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col w-full lg:w-1/3">
+                        <label class="font-medium text-[var(--text)]">Date range:</label>
+
+                        <DatePicker TValue="DateTime?"
+                                    @bind-Dates="@viewModel.SelectedDates"
+                                    SelectionMode="DateInputSelectionMode.Range"
+                                    StaticPicker="false"
+                                    Class="!border !mt-2 !border-[var(--main)] 
+                                            !bg-[var(--section-secondary)] !text-[var(--text)] 
+                                            !rounded !p-2 w-full"/>
+                    </div>
+
+                    <div class="flex flex-col w-full lg:w-1/3 mt-7">
+                        <button @onclick="@(() => viewModel.ChangePage(1))"
+                                class="bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)] hover:text-[var(--text)] font-medium rounded py-2 px-8">
+                            Apply filters
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Results Section -->
+        <div>
+            @if (viewModel.SearchedMatches?.Count > 0)
+            {
+                <h2 class="text-2xl font-bold mb-6 text-[var(--text)]">Results (@viewModel.SearchedMatches.Count)</h2>
+            }
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-[var(--text)]">
+                @if (viewModel.SearchedMatches is null)
+                {
+                    <Loading Class="col-span-full min-h-[200px] flex items-center justify-center"></Loading>
+                }
+                else if (viewModel.SearchedMatches.Count == 0)
+                {
+                    <div class="col-span-full">
+                        <div
+                            class="flex flex-col items-center justify-center py-16 px-4 rounded-lg bg-[var(--section)]/50 border border-dashed border-[var(--main)]">
+                            <svg class="w-16 h-16 text-[var(--text)] mb-4" aria-hidden="true"
+                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                      stroke-width="1.5"
+                                      d="M18.5 4h-13m13 16h-13M9 9h6m-6 4h6m-11-9v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
+                            </svg>
+                            <h3 class="text-xl font-semibold text-[var(--text)] mb-2">No matches found</h3>
+                            <p class="text-center text-[var(--text)] mb-6 max-w-md">
+                                We couldn't find any matches matching your search. Try adjusting your filters or search
+                                criteria.
+                            </p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    foreach (var match in viewModel.SearchedMatches)
+                    {
+                        <div class="max-w-[405px] mx-auto">
+                            <MatchCard Match="@match"/>
+                        </div>
+                    }
+                }
+            </div>
+            @if (viewModel.SearchedMatchesPagination != null && viewModel.SearchedMatchesPagination.Data.Count > 0)
+            {
+                <div class="flex justify-center mt-8">
+                    <OffsetPagination CurrentPage="@viewModel.SearchedMatchesPagination.Page"
+                                      OnPageChanged="@OnPageChanged"
+                                      PageSize="@viewModel.SearchedMatchesPagination.PageSize"
+                                      TotalItems="@viewModel.SearchedMatchesPagination.TotalCount"></OffsetPagination>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private SearchMatchesViewModel? _viewModel;
+    private PropertyChangedEventHandler? _propertyChangedHandler;
+
+    protected override void OnInitialized()
+    {
+        _viewModel = new SearchMatchesViewModel(MatchesService, UserManager, Js);
+        _propertyChangedHandler = async (_, _) => await InvokeAsync(StateHasChanged);
+        _viewModel.PropertyChanged += _propertyChangedHandler;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await Auth.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (_viewModel != null)
+        {
+            await _viewModel.InitializeAsync(principal);
+        }
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        await _viewModel.ChangePage(page);
+    }
+
+    public void Dispose()
+    {
+        if (_viewModel != null && _propertyChangedHandler != null)
+        {
+            _viewModel.PropertyChanged -= _propertyChangedHandler;
+        }
+    }
+
+}

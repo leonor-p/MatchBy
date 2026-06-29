@@ -22,8 +22,8 @@ public class MatchMappingsTests
         Assert.Equal(match.Address, dto.Address);
         Assert.Equal(match.MatchDateTimeUtc, dto.MatchDateTimeUtc);
         Assert.Equal(match.Description, dto.Description);
-        Assert.Equal(match.minPlayers, dto.MinPlayers);
-        Assert.Equal(match.maxPlayers, dto.MaxPlayers);
+        Assert.Equal(match.MinPlayers, dto.MinPlayers);
+        Assert.Equal(match.MaxPlayers, dto.MaxPlayers);
         Assert.Equal(match.Sport, dto.Sport);
         Assert.Equal(match.Status, dto.Status);
         Assert.Equal(match.Privacy, dto.Privacy);
@@ -31,7 +31,6 @@ public class MatchMappingsTests
         Assert.Equal(match.ConversationId, dto.ConversationId);
         Assert.Equal(match.CreatedAtUtc, dto.CreatedAtUtc);
         Assert.Equal(match.UpdatedAtUtc, dto.UpdatedAtUtc);
-        Assert.Equal(match.DeletedAtUtc, dto.DeletedAtUtc);
         Assert.NotNull(dto.Participants);
     }
 
@@ -114,8 +113,8 @@ public class MatchMappingsTests
         Assert.Equal(dto.Address, entity.Address);
         Assert.Equal(DateTime.SpecifyKind(dto.MatchDateTimeUtc, DateTimeKind.Utc), entity.MatchDateTimeUtc);
         Assert.Equal(dto.Description, entity.Description);
-        Assert.Equal(dto.MinPlayers, entity.minPlayers);
-        Assert.Equal(dto.MaxPlayers, entity.maxPlayers);
+        Assert.Equal(dto.MinPlayers, entity.MinPlayers);
+        Assert.Equal(dto.MaxPlayers, entity.MaxPlayers);
         Assert.Equal(dto.Sport, entity.Sport);
         Assert.Equal(MatchStatus.Pendent, entity.Status);
         Assert.Equal(dto.Privacy, entity.Privacy);
@@ -124,7 +123,6 @@ public class MatchMappingsTests
         Assert.Empty(entity.Participants);
         Assert.NotEqual(default, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]
@@ -186,8 +184,8 @@ public class MatchMappingsTests
         Assert.Equal(updateDto.Address, match.Address);
         Assert.Equal(DateTime.SpecifyKind(updateDto.MatchDateTimeUtc, DateTimeKind.Utc), match.MatchDateTimeUtc);
         Assert.Equal(updateDto.Description, match.Description);
-        Assert.Equal(updateDto.MinPlayers, match.minPlayers);
-        Assert.Equal(updateDto.MaxPlayers, match.maxPlayers);
+        Assert.Equal(updateDto.MinPlayers, match.MinPlayers);
+        Assert.Equal(updateDto.MaxPlayers, match.MaxPlayers);
         Assert.Equal(updateDto.Sport, match.Sport);
         Assert.Equal(updateDto.Privacy, match.Privacy);
         Assert.NotNull(match.UpdatedAtUtc);
@@ -311,8 +309,8 @@ public class MatchMappingsTests
             Address = "123 Main Street",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(1),
             Description = "Test match",
-            minPlayers = 5,
-            maxPlayers = 10,
+            MinPlayers = 5,
+            MaxPlayers = 10,
             Sport = Sports.Football,
             Status = MatchStatus.Pendent,
             Privacy = MatchPrivacy.Public,
@@ -320,8 +318,7 @@ public class MatchMappingsTests
             ConversationId = null,
             Participants = new List<ApplicationUser>(),
             CreatedAtUtc = DateTime.UtcNow,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
     }
 
@@ -349,7 +346,10 @@ public class MatchMappingsTests
     {
         return new CreateMatchDto
         {
-            Location = new Location(40.7128, -74.0060, "New York", "USA"),
+            Location = new Location(40.7128,
+                -74.0060,
+                "New York",
+                "USA"),
             Address = "123 Main Street",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(1),
             Description = "Test match",
@@ -357,7 +357,8 @@ public class MatchMappingsTests
             MaxPlayers = 10,
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            CreatorId = "creator-id"
+            CreatorId = "creator-id",
+            MinimumPlayersRating = MinimumPlayersAverage.All
         };
     }
 
@@ -367,14 +368,18 @@ public class MatchMappingsTests
         {
             UserId = "user-id",
             MatchId = "match-id",
-            Location = new Location(40.7580, -73.9855, "New York", "USA"),
+            Location = new Location(40.7580,
+                -73.9855,
+                "New York",
+                "USA"),
             Address = "456 Park Avenue",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(2),
             Description = "Updated match description",
             MinPlayers = 6,
             MaxPlayers = 12,
             Sport = Sports.Basketball,
-            Privacy = MatchPrivacy.Private
+            Privacy = MatchPrivacy.Private,
+            MinimumPlayersRating = MinimumPlayersAverage.All
         };
     }
 }

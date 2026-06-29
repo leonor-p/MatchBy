@@ -1,0 +1,207 @@
+@page "/users"
+@inject IUsersService UsersService
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(false))
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [StreamRendering]
+@using Blazorise
+@using MatchBy.DTOs.User
+@using MatchBy.Services.Users
+@using Microsoft.AspNetCore.Authorization
+@inject IToastService ToastService
+@implements IDisposable
+
+<PageTitle>Users</PageTitle>
+
+<section class="bg-[var(--background)] min-h-screen">
+    <div class="max-w-screen-xl px-4 m-8 mx-auto">
+        <h1 class="text-4xl font-bold text-[var(--main)] mb-6">
+            Discover Players
+        </h1>
+
+        <div class="mb-6">
+            <div class="relative">
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg class="w-5 h-5 text-[var(--text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+
+                <input type="text"
+                       @bind="_searchTerm"
+                       @oninput="OnSearchInput"
+                       placeholder="Search users by name, username, or location..."
+                       class="w-full pl-10 pr-10 py-3 bg-[var(--section-secondary)] text-[var(--text)] rounded-lg border-2 border-[var(--main)] focus:ring-2 focus:ring-[var(--main)] focus:border-transparent"/>
+
+                @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                {
+                    <button @onclick="ClearSearch"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text)] hover:text-[var(--main)]">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                  clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                }
+            </div>
+            @if (_usersResponse != null)
+            {
+                <p class="text-[var(--text)] mt-4 text-sm">
+                    Showing @_usersResponse.Data.Count of @_usersResponse.TotalCount @(_usersResponse.TotalCount == 1 ? "user" : "users")
+                    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                    {
+                        <span> matching "@_searchTerm"</span>
+                    }
+                </p>
+            }
+        </div>
+
+        @if (_loading)
+        {
+            <div class="flex justify-center items-center py-12">
+                <Loading></Loading>
+            </div>
+        }
+        else if (_usersResponse != null && _usersResponse.Data.Any())
+        {
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                @foreach (var user in _usersResponse.Data)
+                {
+                    <UserCard User="@user" OnClick="NavigateToProfile"></UserCard>
+                }
+            </div>
+
+            <div class="flex justify-center items-center gap-2 mt-8">
+                <OffsetPagination CurrentPage="@_currentPage" OnPageChanged="GoToPage" PageSize="@PageSize"
+                                  TotalItems="@_usersResponse.TotalCount"></OffsetPagination>
+            </div>
+        }
+        else if (!_loading)
+        {
+            <UsersEmptyState SearchTerm="@_searchTerm"></UsersEmptyState>
+        }
+    </div>
+</section>
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
+
+@code {
+    private PaginationResponse<List<UserDto>>? _usersResponse;
+    private bool _loading = true;
+    private const int PageSize = 8;
+    private string _searchTerm = "";
+    private int _currentPage = 1;
+    private Timer? _debounceTimer;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
+    [Parameter, SupplyParameterFromQuery(Name = "search")]
+    public string? Search { get; set; }
+
+    [Parameter, SupplyParameterFromQuery(Name = "page")]
+    public int? Page { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if(user.Identity is not { IsAuthenticated: true })
+        {
+            NavigationManager.NavigateTo("/account/login");
+        }
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        _searchTerm = Search ?? "";
+        _currentPage = Page.GetValueOrDefault(1);
+        if (_currentPage < 1) _currentPage = 1;
+
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            _loading = true;
+            StateHasChanged();
+
+            var result = await UsersService.GetUsers(
+                search: string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm,
+                page: _currentPage,
+                pageSize: PageSize,
+                CancellationToken.None);
+
+            if (!result.Success)
+            {
+                await ToastService.Error(result.ErrorMessages.FirstOrDefault());
+                return;
+            }
+
+            _usersResponse = result.Data;
+        }
+        catch
+        {
+            await ToastService.Error("An error occurred while loading users.");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        HandleSearchDebounced();
+    }
+
+    private void HandleSearchDebounced()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(async _ =>
+        {
+            _currentPage = 1;
+            await InvokeAsync(async () =>
+            {
+                UpdateUrl(_searchTerm, _currentPage);
+                await LoadUsers();
+            });
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        _currentPage = 1;
+        UpdateUrl(null, 1);
+        await LoadUsers();
+    }
+
+    private void NavigateToProfile(string userId) => NavigationManager.NavigateTo($"/profile/{userId}");
+
+    private async Task GoToPage(int page)
+    {
+        _currentPage = page;
+        UpdateUrl(_searchTerm, _currentPage);
+        await LoadUsers();
+    }
+    
+    void UpdateUrl(string? search, int? page)
+    {
+        var uri = NavigationManager.GetUriWithQueryParameters(
+            new Dictionary<string, object?>
+            {
+                ["search"] = string.IsNullOrWhiteSpace(search) ? null : search,
+                ["page"] = page <= 1 ? null : page
+            });
+
+        NavigationManager.NavigateTo(uri, replace: true);
+    }
+
+    public void Dispose() => _debounceTimer?.Dispose();
+}

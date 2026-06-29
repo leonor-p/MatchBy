@@ -1,22 +1,28 @@
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Blazorise;
+using Blazorise.FluentValidation;
+using Blazorise.Icons.FontAwesome;
+using Blazorise.Tailwind;
+using FluentValidation;
+using Hangfire;
+using Hangfire.Common;
+using Hangfire.PostgreSql;
 using MatchBy.Components;
 using MatchBy.Components.Account;
 using MatchBy.Data;
 using MatchBy.Data.Seeders;
 using MatchBy.Extensions;
-using MatchBy.Models;
-using Blazorise;
-using Blazorise.FluentValidation;
-using Blazorise.Tailwind;
-using Blazorise.Icons.FontAwesome;
-using FluentValidation;
-using Hangfire;
-using Hangfire.PostgreSql;
-using Hangfire.Common;
 using MatchBy.Hubs;
-using MatchBy.Services.Notifications;
+using MatchBy.Models;
+using MatchBy.Repositories.ChatConversation;
+using MatchBy.Repositories.ChatMessage;
+using MatchBy.Repositories.Friend;
+using MatchBy.Repositories.Match;
+using MatchBy.Repositories.MatchInvite;
+using MatchBy.Repositories.Notification;
+using MatchBy.Repositories.PlayerRating;
+using MatchBy.Repositories.Team;
+using MatchBy.Repositories.TeamInvite;
+using MatchBy.Repositories.User;
 using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
@@ -26,11 +32,15 @@ using MatchBy.Services.Friends;
 using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.Matches;
 using MatchBy.Services.MatchInvites;
+using MatchBy.Services.Notifications;
 using MatchBy.Services.PlayerRatings;
-using MatchBy.Services.Teams;
 using MatchBy.Services.TeamInvites;
+using MatchBy.Services.Teams;
 using MatchBy.Services.Users;
 using MatchBy.Settings;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 using INotificationService = MatchBy.Services.Notifications.INotificationService;
@@ -76,20 +86,6 @@ builder.Services.Configure<ResendClientOptions>(o =>
 });
 builder.Services.AddTransient<IResend, ResendClient>();
 
-/*builder.WebHost.UseSentry(options =>
-{
-    string? dsn = builder.Configuration["Sentry:DSN"];
-
-    if (string.IsNullOrEmpty(dsn))
-    {
-        throw new InvalidOperationException("Sentry DSN not found in configuration.");
-    }
-
-    options.Dsn = dsn;
-    options.TracesSampleRate = 1.0;
-    options.Debug = true;
-});*/
-
 builder.Services.AddLocalTimeZoneServer();
 
 builder.Services.AddAuthentication(options =>
@@ -129,7 +125,8 @@ string connectionString = builder.Configuration.GetConnectionString("DefaultConn
                           throw new InvalidOperationException(
                               "Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -151,6 +148,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.User.RequireUniqueEmail = true;
         options.User.AllowedUserNameCharacters =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -173,6 +171,17 @@ builder.Services
 
 builder.Services.AddValidatorsFromAssembly(typeof(App).Assembly);
 
+builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
+builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+builder.Services.AddScoped<IFriendRepository, FriendRepository>();
+builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+builder.Services.AddScoped<IMatchInviteRepository, MatchInviteRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IPlayerRatingRepository, PlayerRatingRepository>();
+builder.Services.AddScoped<ITeamRepository, TeamRepository>();
+builder.Services.AddScoped<ITeamInviteRepository, TeamInviteRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IImageRefreshService, ImageRefreshService>();
@@ -188,30 +197,40 @@ builder.Services.AddScoped<IPlayerRatingService, PlayerRatingService>();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ChatState>();
-
+builder.Services.AddScoped<IMatchReminderJob, MatchReminderJob>();
 builder.Services.AddHttpContextAccessor();
+
+string[] allowedOrigins = builder.Configuration.GetSection("AllowedCorsOrigins").Get<string[]>() ?? [];
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("NewPolicy", corsPolicyBuilder =>
-        corsPolicyBuilder.AllowAnyOrigin()
+    options.AddPolicy("DevPolicy", corsPolicyBuilder =>
+        corsPolicyBuilder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+    
+    options.AddPolicy("ProdPolicy", corsPolicyBuilder =>
+        corsPolicyBuilder
+            .WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
 
 WebApplication app = builder.Build();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
     await app.RecreateDatabase();
     //await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
+    app.UseCors("DevPolicy");
 }
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
+    app.UseCors("ProdPolicy");
 }
 
 using (IServiceScope scope = app.Services.CreateScope())
@@ -222,10 +241,14 @@ using (IServiceScope scope = app.Services.CreateScope())
         Job.FromExpression<IJobService>(service => service.ProcessMatchStatesAsync()),
         "*/1 * * * *" // Every minute
     );
+    recurringJobManager.AddOrUpdate(
+        "send-match-reminders",
+        Job.FromExpression<IMatchReminderJob>(job => job.SendRemindersAsync()),
+        "*/30 * * * *" // Every 30 minutes
+    );
 }
 
 app.UseHttpsRedirection();
-app.UseCors("NewPolicy");
 app.MapStaticAssets();
 app.MapControllers();
 app.UseStatusCodePagesWithReExecute("/error-page/{0}");

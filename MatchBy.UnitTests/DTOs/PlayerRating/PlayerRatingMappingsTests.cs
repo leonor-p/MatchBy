@@ -37,9 +37,9 @@ public class PlayerRatingMappingsTests
             Location = new Location(0, 0, "City", "Country"),
             Address = "Test Address",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(1),
-            Description = "Test Match",
-            minPlayers = 2,
-            maxPlayers = 5,
+            Description = "Test Match", 
+            MinPlayers = 2,
+            MaxPlayers = 5,
             Sport = Sports.Football,
             Status = MatchStatus.Pendent,
             Privacy = MatchPrivacy.Public,
@@ -59,8 +59,7 @@ public class PlayerRatingMappingsTests
             MatchId = "match_789",
             Match = match,
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = updatedAt,
-            DeletedAtUtc = null
+            UpdatedAtUtc = updatedAt
         };
 
         // Act
@@ -101,8 +100,7 @@ public class PlayerRatingMappingsTests
             MatchId = "match_789",
             Match = null,
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         // Act
@@ -147,7 +145,6 @@ public class PlayerRatingMappingsTests
         Assert.Equal("match_789", entity.MatchId);
         Assert.NotEqual(DateTime.MinValue, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]
@@ -209,8 +206,7 @@ public class PlayerRatingMappingsTests
             ReceivedById = "receiver_456",
             MatchId = "match_789",
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdatePlayerRatingDto
@@ -245,8 +241,7 @@ public class PlayerRatingMappingsTests
             ReceivedById = "receiver_456",
             MatchId = "match_789",
             CreatedAtUtc = DateTime.UtcNow.AddDays(-5),
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdatePlayerRatingDto
@@ -279,8 +274,7 @@ public class PlayerRatingMappingsTests
             ReceivedById = "receiver_456",
             MatchId = "match_789",
             CreatedAtUtc = DateTime.UtcNow.AddDays(-5),
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdatePlayerRatingDto

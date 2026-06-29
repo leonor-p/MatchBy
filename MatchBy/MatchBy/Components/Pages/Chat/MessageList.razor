@@ -9,7 +9,7 @@
     @if (!_isUserAtBottom)
     {
         <button @onclick="ScrollToBottom"
-                class="fixed bottom-24 sm:bottom-28 right-4 sm:right-6 z-20 p-2.5 sm:p-3 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                class="fixed bottom-24 sm:bottom-40 right-4 sm:right-6 z-20 p-2.5 sm:p-3 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
                 style="background-color: var(--main); color: var(--text-contrast);">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
@@ -64,12 +64,10 @@
 
     protected override void OnParametersSet()
     {
-        // Detectar novas mensagens
         var currentCount = ChatMessages.Count;
         if (_isInitialized && currentCount > _previousMessageCount)
         {
-            // New messages arrived - mark for auto-scroll
-            _shouldAutoScroll = _isUserAtBottom; // Only auto-scroll if already at the bottom
+            _shouldAutoScroll = _isUserAtBottom; 
         }
         _previousMessageCount = currentCount;
     }
@@ -80,15 +78,14 @@
         {
             _isInitialized = true;
             _previousMessageCount = ChatMessages.Count;
-            await Task.Delay(100); // Small delay to ensure the DOM is rendered
+            await Task.Delay(100);
             await ScrollToBottom();
             return;
         }
 
-        // Scroll only if auto-scroll was marked (new messages + user was at the bottom)
         if (_shouldAutoScroll)
         {
-            _shouldAutoScroll = false; // Reset flag
+            _shouldAutoScroll = false;
             await ScrollToBottom();
         }
     }
@@ -112,7 +109,6 @@
         {
             var position = await Js.InvokeAsync<ScrollPosition>("getScrollPosition", _scrollContainer);
             
-            // Considera "no fundo" se estiver a 100px do final
             var distanceFromBottom = position.ScrollHeight - position.ScrollTop - position.ClientHeight;
             _isUserAtBottom = distanceFromBottom < 100;
         }
