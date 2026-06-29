@@ -24,5 +24,8 @@ jobs:
       - name: Build
         run: dotnet build MatchBy.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=false /p:CodeAnalysisTreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:AnalysisMode=None
 
+      - name: Install Playwright browsers
+        run: pwsh MatchBy.UnitTests/bin/Release/net10.0/playwright.ps1 install chromium
+
       - name: Run tests
         run: dotnet test MatchBy.sln --configuration Release --no-build --verbosity normal --filter "FullyQualifiedName!~Playwright"
