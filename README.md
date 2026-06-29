@@ -35,7 +35,6 @@ MatchBy centralizes everything (players, time, and location) to remove coordinat
 | **Validation** | FluentValidation |
 | **Authentication** | ASP.NET Core Identity |
 | **Hosting** | Azure App Service |
-| **CI/CD** | GitHub Actions |
 
 ## 📋 Prerequisites
 
@@ -51,7 +50,7 @@ MatchBy centralizes everything (players, time, and location) to remove coordinat
 
 ```bash
 git clone <repository-url>
-cd LAB
+cd MatchBy
 ```
 
 ### 2. Database Setup
@@ -166,7 +165,7 @@ MatchBy follows a **layered architecture** pattern:
 3. **Data Access Layer** - Entity Framework Core with PostgreSQL
 4. **Domain Layer** - Domain models and entities
 
-For detailed architecture documentation, see [Architecture](https://github.com/MESW-LES-2025/MatchBy/wiki/Architecture).
+For detailed architecture documentation, see [Architecture](https://github.com/leonor-p/MatchBy/wiki/Architecture).
 
 ## 🧪 Testing
 
@@ -182,28 +181,21 @@ Or use Visual Studio's Test Explorer (Ctrl+R, A).
 
 ### Environments
 
-- **Staging**: [Staging URL](https://matchby-d4eweaajaffthmh6.italynorth-01.azurewebsites.net) (deployed from `main` branch)
-- **Production**: [matchby.me](https://matchby.me/) (deployed from `production` branch with version tags)
-
-### CI/CD
-
-- **Staging**: Automatic deployment on push to `main` branch
-- **Production**: Deployment triggered by version tags (e.g., `v1.2.0`) on `production` branch
-
-For more details, see [Deployment](https://github.com/MESW-LES-2025/MatchBy/wiki/Deployment).
+- **Staging**: Deployed from `main` branch
+- **Production**: Deployed from `production` branch with version tags
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the [GitHub Wiki](https://github.com/MESW-LES-2025/MatchBy/wiki):
+Comprehensive documentation is available in the [GitHub Wiki](https://github.com/leonor-p/MatchBy/wiki):
 
-- [Home](https://github.com/MESW-LES-2025/MatchBy/wiki/Home) - Main documentation index
-- [Product Vision](https://github.com/MESW-LES-2025/MatchBy/wiki/Product-Vision) - Vision, target group, and business goals
-- [User Stories](https://github.com/MESW-LES-2025/MatchBy/wiki/User-Stories) - Complete list of user stories
-- [Architecture](https://github.com/MESW-LES-2025/MatchBy/wiki/Architecture) - System architecture and design patterns
-- [Database Schema](https://github.com/MESW-LES-2025/MatchBy/wiki/Database-Schema) - Database structure and relationships
-- [Deployment](https://github.com/MESW-LES-2025/MatchBy/wiki/Deployment) - CI/CD and deployment strategy
-- [UI Mockups](https://github.com/MESW-LES-2025/MatchBy/wiki/UI‐Mockups) - User interface designs
-- [Iteration 1](https://github.com/MESW-LES-2025/MatchBy/wiki/Iteration-1) - Sprint reviews and deliverables
+- [Home](https://github.com/leonor-p/MatchBy/wiki/Home) - Main documentation index
+- [Product Vision](https://github.com/leonor-p/MatchBy/wiki/Product-Vision) - Vision, target group, and business goals
+- [User Stories](https://github.com/leonor-p/MatchBy/wiki/User-Stories) - Complete list of user stories
+- [Architecture](https://github.com/leonor-p/MatchBy/wiki/Architecture) - System architecture and design patterns
+- [Database Schema](https://github.com/leonor-p/MatchBy/wiki/Database-Schema) - Database structure and relationships
+- [Deployment](https://github.com/leonor-p/MatchBy/wiki/Deployment) - Deployment strategy
+- [UI Mockups](https://github.com/leonor-p/MatchBy/wiki/UI‐Mockups) - User interface designs
+- [Iteration 1](https://github.com/leonor-p/MatchBy/wiki/Iteration-1) - Sprint reviews and deliverables
 
 ## 🔧 Development Guidelines
 
