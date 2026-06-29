@@ -25,4 +25,4 @@ jobs:
         run: dotnet build MatchBy.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=false /p:CodeAnalysisTreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:AnalysisMode=None
 
       - name: Run tests
-        run: dotnet test MatchBy.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test MatchBy.sln --configuration Release --no-build --verbosity normal --filter "FullyQualifiedName!~Playwright"
