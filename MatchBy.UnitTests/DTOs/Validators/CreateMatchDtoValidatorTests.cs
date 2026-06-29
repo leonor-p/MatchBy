@@ -364,14 +364,14 @@ public class CreateMatchDtoValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.MatchDateTimeUtc)
-            .WithErrorMessage("Match date and time must be in the future.");
+            .WithErrorMessage("Match must be scheduled at least 7 days in the future.");
     }
 
     [Fact]
     public void Validate_WhenMatchDateTimeUtcIsInTheFuture_ShouldPass()
     {
         // Arrange
-        CreateMatchDto dto = CreateValidDto() with { MatchDateTimeUtc = DateTime.UtcNow.AddDays(1) };
+        CreateMatchDto dto = CreateValidDto() with { MatchDateTimeUtc = DateTime.UtcNow.AddDays(8) };
 
         // Act
         TestValidationResult<CreateMatchDto> result = _validator.TestValidate(dto);
@@ -446,7 +446,7 @@ public class CreateMatchDtoValidatorTests
             MinimumPlayersRating = MinimumPlayersAverage.All,
             Location = new Location(40.7128, -74.0060, "New York", "USA"),
             Address = "123 Main Street",
-            MatchDateTimeUtc = DateTime.UtcNow.AddDays(1),
+            MatchDateTimeUtc = DateTime.UtcNow.AddDays(8),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
             CreatorId = "creator-id"
