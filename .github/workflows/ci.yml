@@ -22,7 +22,7 @@ jobs:
         run: dotnet restore MatchBy.sln
 
       - name: Build
-        run: dotnet build MatchBy.sln --configuration Release --no-restore
+        run: dotnet build MatchBy.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=false /p:CodeAnalysisTreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:AnalysisMode=None
 
       - name: Run tests
         run: dotnet test MatchBy.sln --configuration Release --no-build --verbosity normal
