@@ -1,0 +1,5 @@
+[build]
+dockerfilePath = "MatchBy/MatchBy/Dockerfile"
+
+[deploy]
+startCommand = "dotnet MatchBy.dll"
