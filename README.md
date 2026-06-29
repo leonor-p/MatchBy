@@ -1,4 +1,4 @@
-﻿# MatchBy
+# MatchBy
 
 > A platform that connects people who want to play sports, making it easy to create, find, and join games nearby.
 
@@ -7,7 +7,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.2-336791?logo=postgresql)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## ðŸŽ¯ Overview
+## 🎯 Overview
 
 MatchBy centralizes everything (players, time, and location) to remove coordination hassle. The platform enables active individuals to discover nearby matches, create games, and connect with other players in their community.
 
@@ -20,7 +20,7 @@ MatchBy centralizes everything (players, time, and location) to remove coordinat
 - **Team Management** - Organize teams and manage invitations
 - **Real-time Updates** - Live notifications and match status updates
 
-## ðŸ› ï¸ Technology Stack
+## 🛠️ Technology Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -36,7 +36,7 @@ MatchBy centralizes everything (players, time, and location) to remove coordinat
 | **Authentication** | ASP.NET Core Identity |
 | **Hosting** | Azure App Service |
 
-## ðŸ“‹ Prerequisites
+## 📋 Prerequisites
 
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - [PostgreSQL 17.2](https://www.postgresql.org/download/) or Docker
@@ -44,7 +44,7 @@ MatchBy centralizes everything (players, time, and location) to remove coordinat
 - AWS S3 credentials (or Supabase Storage)
 - Resend API key (for email functionality)
 
-## ðŸš€ Getting Started
+## 🚀 Getting Started
 
 ### 1. Clone the Repository
 
@@ -128,35 +128,35 @@ The application will be available at `https://localhost:5001` (or the port speci
 
 The Hangfire dashboard is available at `/hangfire` for monitoring background jobs.
 
-## ðŸ“ Project Structure
+## 📁 Project Structure
 
 ```
 MatchBy/
-â”œâ”€â”€ MatchBy/                    # Main Blazor Server application
-â”‚   â”œâ”€â”€ Components/            # Razor components (Pages, Layout, Account)
-â”‚   â”œâ”€â”€ Controllers/           # API controllers
-â”‚   â”œâ”€â”€ Data/                  # Data access layer (DbContext, Migrations, Seeders)
-â”‚   â”œâ”€â”€ DTOs/                  # Data Transfer Objects
-â”‚   â”œâ”€â”€ Enums/                 # Enumerations
-â”‚   â”œâ”€â”€ Extensions/            # Extension methods
-â”‚   â”œâ”€â”€ Hubs/                  # SignalR hubs (ChatHub)
-â”‚   â”œâ”€â”€ Models/                # Domain models
-â”‚   â”œâ”€â”€ Services/              # Business logic services
-â”‚   â”‚   â”œâ”€â”€ BackgroundJobs/   # Hangfire job services
-â”‚   â”‚   â”œâ”€â”€ ChatMessages/     # Chat message services
-â”‚   â”‚   â”œâ”€â”€ Conversations/    # Conversation services
-â”‚   â”‚   â”œâ”€â”€ Email/            # Email services
-â”‚   â”‚   â”œâ”€â”€ FileValidator/    # File validation
-â”‚   â”‚   â”œâ”€â”€ Matches/          # Match services
-â”‚   â”‚   â”œâ”€â”€ S3/               # S3 storage services
-â”‚   â”‚   â””â”€â”€ Users/            # User services
-â”‚   â”œâ”€â”€ Settings/              # Configuration classes
-â”‚   â””â”€â”€ Validators/            # FluentValidation validators
-â”œâ”€â”€ MatchBy.Client/            # Blazor WebAssembly client (optional)
-â””â”€â”€ MatchBy.UnitTests/         # Unit tests
+├── MatchBy/                    # Main Blazor Server application
+│   ├── Components/            # Razor components (Pages, Layout, Account)
+│   ├── Controllers/           # API controllers
+│   ├── Data/                  # Data access layer (DbContext, Migrations, Seeders)
+│   ├── DTOs/                  # Data Transfer Objects
+│   ├── Enums/                 # Enumerations
+│   ├── Extensions/            # Extension methods
+│   ├── Hubs/                  # SignalR hubs (ChatHub)
+│   ├── Models/                # Domain models
+│   ├── Services/              # Business logic services
+│   │   ├── BackgroundJobs/   # Hangfire job services
+│   │   ├── ChatMessages/     # Chat message services
+│   │   ├── Conversations/    # Conversation services
+│   │   ├── Email/            # Email services
+│   │   ├── FileValidator/    # File validation
+│   │   ├── Matches/          # Match services
+│   │   ├── S3/               # S3 storage services
+│   │   └── Users/            # User services
+│   ├── Settings/              # Configuration classes
+│   └── Validators/            # FluentValidation validators
+├── MatchBy.Client/            # Blazor WebAssembly client (optional)
+└── MatchBy.UnitTests/         # Unit tests
 ```
 
-## ðŸ—ï¸ Architecture
+## 🏗️ Architecture
 
 MatchBy follows a **layered architecture** pattern:
 
@@ -167,7 +167,7 @@ MatchBy follows a **layered architecture** pattern:
 
 For detailed architecture documentation, see [Architecture](https://github.com/leonor-p/MatchBy/wiki/Architecture).
 
-## ðŸ§ª Testing
+## 🧪 Testing
 
 Run unit tests using:
 
@@ -177,13 +177,13 @@ dotnet test
 
 Or use Visual Studio's Test Explorer (Ctrl+R, A).
 
-## ðŸš¢ Deployment
+## 🚢 Deployment
 
 ### Environments
 
 - **Live**: [matchby-production.up.railway.app](https://matchby-production.up.railway.app/) (deployed from `main` branch via Railway)
 
-## ðŸ“š Documentation
+## 📚 Documentation
 
 Comprehensive documentation is available in the [GitHub Wiki](https://github.com/leonor-p/MatchBy/wiki):
 
@@ -193,10 +193,10 @@ Comprehensive documentation is available in the [GitHub Wiki](https://github.com
 - [Architecture](https://github.com/leonor-p/MatchBy/wiki/Architecture) - System architecture and design patterns
 - [Database Schema](https://github.com/leonor-p/MatchBy/wiki/Database-Schema) - Database structure and relationships
 - [Deployment](https://github.com/leonor-p/MatchBy/wiki/Deployment) - Deployment strategy
-- [UI Mockups](https://github.com/leonor-p/MatchBy/wiki/UIâ€Mockups) - User interface designs
+- [UI Mockups](https://github.com/leonor-p/MatchBy/wiki/UI‐Mockups) - User interface designs
 - [Iteration 1](https://github.com/leonor-p/MatchBy/wiki/Iteration-1) - Sprint reviews and deliverables
 
-## ðŸ”§ Development Guidelines
+## 🔧 Development Guidelines
 
 ### Code Style
 
@@ -214,22 +214,21 @@ Comprehensive documentation is available in the [GitHub Wiki](https://github.com
 - **Error Handling**: Implement proper error handling and logging
 - **Security**: Use HTTPS, implement proper CORS policies, and follow OWASP guidelines
 
-## ðŸ¤ Contributing
+## 🤝 Contributing
 
 1. Create a feature branch from `main`
 2. Make your changes
 3. Ensure all tests pass
 4. Submit a pull request
 
-## ðŸ“ License
+## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## ðŸ‘¥ Team
+## 👥 Team
 
 Developed as part of a Master's degree program.
 
 ---
 
-**Made with â¤ï¸ using Blazor and .NET**
-
+**Made with ❤️ using Blazor and .NET**
