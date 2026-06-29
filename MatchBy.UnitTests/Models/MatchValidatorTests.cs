@@ -86,13 +86,13 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.minPlayers = 0;
+        match.MinPlayers = 0;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.minPlayers)
+        result.ShouldHaveValidationErrorFor(x => x.MinPlayers)
             .WithErrorMessage("Minimum players must be greater than 0.");
     }
 
@@ -101,13 +101,13 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.minPlayers = -1;
+        match.MinPlayers = -1;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.minPlayers)
+        result.ShouldHaveValidationErrorFor(x => x.MinPlayers)
             .WithErrorMessage("Minimum players must be greater than 0.");
     }
 
@@ -116,13 +116,13 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.minPlayers = 31;
+        match.MinPlayers = 31;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.minPlayers)
+        result.ShouldHaveValidationErrorFor(x => x.MinPlayers)
             .WithErrorMessage("Minimum players must be less than or equal to 30.");
     }
 
@@ -131,14 +131,14 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.minPlayers = 30;
-        match.maxPlayers = 30;
+        match.MinPlayers = 30;
+        match.MaxPlayers = 30;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x.minPlayers);
+        result.ShouldNotHaveValidationErrorFor(x => x.MinPlayers);
     }
 
     [Fact]
@@ -146,13 +146,13 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.maxPlayers = 0;
+        match.MaxPlayers = 0;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.maxPlayers)
+        result.ShouldHaveValidationErrorFor(x => x.MaxPlayers)
             .WithErrorMessage("Maximum players must be greater than 0.");
     }
 
@@ -161,13 +161,13 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.maxPlayers = -1;
+        match.MaxPlayers = -1;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.maxPlayers)
+        result.ShouldHaveValidationErrorFor(x => x.MaxPlayers)
             .WithErrorMessage("Maximum players must be greater than 0.");
     }
 
@@ -176,13 +176,13 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.maxPlayers = 31;
+        match.MaxPlayers = 31;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.maxPlayers)
+        result.ShouldHaveValidationErrorFor(x => x.MaxPlayers)
             .WithErrorMessage("Maximum players must be less than or equal to 30.");
     }
 
@@ -191,13 +191,13 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.maxPlayers = 30;
+        match.MaxPlayers = 30;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x.maxPlayers);
+        result.ShouldNotHaveValidationErrorFor(x => x.MaxPlayers);
     }
 
     [Fact]
@@ -205,14 +205,14 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.minPlayers = 5;
-        match.maxPlayers = 3;
+        match.MinPlayers = 5;
+        match.MaxPlayers = 3;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.maxPlayers)
+        result.ShouldHaveValidationErrorFor(x => x.MaxPlayers)
             .WithErrorMessage("Maximum players must be greater than or equal to minimum players.");
     }
 
@@ -221,14 +221,14 @@ public class MatchValidatorTests
     {
         // Arrange
         Match match = CreateValidMatch();
-        match.minPlayers = 5;
-        match.maxPlayers = 5;
+        match.MinPlayers = 5;
+        match.MaxPlayers = 5;
 
         // Act
         TestValidationResult<Match> result = _validator.TestValidate(match);
 
         // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x.maxPlayers);
+        result.ShouldNotHaveValidationErrorFor(x => x.MaxPlayers);
     }
 
     [Fact]
@@ -326,8 +326,8 @@ public class MatchValidatorTests
         {
             Id = "test-id",
             Description = "Test match description",
-            minPlayers = 5,
-            maxPlayers = 10,
+            MinPlayers = 5,
+            MaxPlayers = 10,
             Location = new Location(40.7128, -74.0060, "New York", "USA"),
             Address = "123 Main Street",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(1),

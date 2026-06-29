@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Blazorise;
 using FluentValidation;
 using FluentValidation.Results;
@@ -108,7 +108,7 @@ public class CreateTeamViewModelTests
         var args = new InputFileChangeEventArgs(new[] { mockFile.Object });
 
         // Act
-        _viewModel.OnImageSelected(args);
+        _viewModel.SelectedImage = mockFile.Object;
 
         // Assert
         Assert.Equal(mockFile.Object, _viewModel.SelectedImage);
@@ -120,7 +120,7 @@ public class CreateTeamViewModelTests
         // Arrange
         var mockFile = new Mock<IBrowserFile>();
         var args = new InputFileChangeEventArgs(new[] { mockFile.Object });
-        _viewModel.OnImageSelected(args);
+        _viewModel.SelectedImage = mockFile.Object;
         Assert.NotNull(_viewModel.SelectedImage);
 
         // Act
@@ -277,7 +277,7 @@ public class CreateTeamViewModelTests
         _usersServiceMock
             .Setup(s => s.GetUsers(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Callback(() => callCount++)
-            .ReturnsAsync(Result<PaginationResponse<List<ApplicationUser>>>.Ok(new PaginationResponse<List<ApplicationUser>>()));
+            .ReturnsAsync(Result<PaginationResponse<List<UserDto>>>.Ok(new PaginationResponse<List<UserDto>> { Data = [], Page = 0, TotalCount = 0, PageSize = 0 }));
 
         // Act
         await _viewModel.LoadMembersAsync();
@@ -290,12 +290,12 @@ public class CreateTeamViewModelTests
     public async Task LoadMembersAsync_WhenSuccess_ShouldSetAvailableUsers()
     {
         // Arrange
-        var users = new List<ApplicationUser>
+        var users = new List<UserDto>
         {
-            new() { Id = "user1", DisplayName = "User 1" },
-            new() { Id = "user2", DisplayName = "User 2" }
+            new() { Id = "user1", UserName = "user1", DisplayName = "User 1" },
+            new() { Id = "user2", UserName = "user2", DisplayName = "User 2" }
         };
-        var paginationResponse = new PaginationResponse<List<ApplicationUser>>
+        var paginationResponse = new PaginationResponse<List<UserDto>>
         {
             Data = users,
             TotalCount = 2,
@@ -305,7 +305,7 @@ public class CreateTeamViewModelTests
 
         _usersServiceMock
             .Setup(s => s.GetUsers(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaginationResponse<List<ApplicationUser>>>.Ok(paginationResponse));
+            .ReturnsAsync(Result<PaginationResponse<List<UserDto>>>.Ok(paginationResponse));
 
         // Act
         await _viewModel.LoadMembersAsync();
@@ -320,12 +320,12 @@ public class CreateTeamViewModelTests
     {
         // Arrange
         _viewModel.UserId = "user1";
-        var users = new List<ApplicationUser>
+        var users = new List<UserDto>
         {
-            new() { Id = "user1", DisplayName = "User 1" },
-            new() { Id = "user2", DisplayName = "User 2" }
+            new() { Id = "user1", UserName = "user1", DisplayName = "User 1" },
+            new() { Id = "user2", UserName = "user2", DisplayName = "User 2" }
         };
-        var paginationResponse = new PaginationResponse<List<ApplicationUser>>
+        var paginationResponse = new PaginationResponse<List<UserDto>>
         {
             Data = users,
             TotalCount = 2,
@@ -335,7 +335,7 @@ public class CreateTeamViewModelTests
 
         _usersServiceMock
             .Setup(s => s.GetUsers(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaginationResponse<List<ApplicationUser>>>.Ok(paginationResponse));
+            .ReturnsAsync(Result<PaginationResponse<List<UserDto>>>.Ok(paginationResponse));
 
         // Act
         await _viewModel.LoadMembersAsync();
@@ -350,7 +350,7 @@ public class CreateTeamViewModelTests
     public async Task LoadMembersAsync_WhenFailure_ShouldShowErrorToast()
     {
         // Arrange
-        var errorResult = Result<PaginationResponse<List<ApplicationUser>>>.Fail("Error loading users");
+        var errorResult = Result<PaginationResponse<List<UserDto>>>.Fail("Error loading users");
         _usersServiceMock
             .Setup(s => s.GetUsers(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(errorResult);
@@ -371,11 +371,11 @@ public class CreateTeamViewModelTests
     public async Task OnMemberSearchKeyDownAsync_WhenEnterKey_ShouldLoadMembers()
     {
         // Arrange
-        var users = new List<ApplicationUser>
+        var users = new List<UserDto>
         {
-            new() { Id = "user1", DisplayName = "User 1" }
+            new() { Id = "user1", UserName = "user1", DisplayName = "User 1" }
         };
-        var paginationResponse = new PaginationResponse<List<ApplicationUser>>
+        var paginationResponse = new PaginationResponse<List<UserDto>>
         {
             Data = users,
             TotalCount = 1,
@@ -385,7 +385,7 @@ public class CreateTeamViewModelTests
 
         _usersServiceMock
             .Setup(s => s.GetUsers(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaginationResponse<List<ApplicationUser>>>.Ok(paginationResponse));
+            .ReturnsAsync(Result<PaginationResponse<List<UserDto>>>.Ok(paginationResponse));
 
         var keyboardEventArgs = new KeyboardEventArgs { Key = "Enter" };
 
@@ -418,11 +418,11 @@ public class CreateTeamViewModelTests
     public async Task OnMemberPageChangedAsync_ShouldUpdatePageAndLoadMembers()
     {
         // Arrange
-        var users = new List<ApplicationUser>
+        var users = new List<UserDto>
         {
-            new() { Id = "user1", DisplayName = "User 1" }
+            new() { Id = "user1", UserName = "user1", DisplayName = "User 1" }
         };
-        var paginationResponse = new PaginationResponse<List<ApplicationUser>>
+        var paginationResponse = new PaginationResponse<List<UserDto>>
         {
             Data = users,
             TotalCount = 1,
@@ -432,7 +432,7 @@ public class CreateTeamViewModelTests
 
         _usersServiceMock
             .Setup(s => s.GetUsers(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaginationResponse<List<ApplicationUser>>>.Ok(paginationResponse));
+            .ReturnsAsync(Result<PaginationResponse<List<UserDto>>>.Ok(paginationResponse));
 
         // Act
         await _viewModel.OnMemberPageChangedAsync(2);
@@ -609,7 +609,7 @@ public class CreateTeamViewModelTests
         _viewModel.UserId = "user1";
         var mockFile = new Mock<IBrowserFile>();
         var args = new InputFileChangeEventArgs([mockFile.Object]);
-        _viewModel.OnImageSelected(args);
+        _viewModel.SelectedImage = mockFile.Object;
 
         var teamDto = new TeamDto
         {

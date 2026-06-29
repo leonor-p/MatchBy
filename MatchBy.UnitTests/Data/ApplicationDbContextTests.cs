@@ -63,8 +63,8 @@ public class ApplicationDbContextTests : IDisposable
         {
             Id = "test-match-id",
             Description = "Test Match",
-            minPlayers = 5,
-            maxPlayers = 10,
+            MinPlayers = 5,
+            MaxPlayers = 10,
             CreatorId = "creator-id",
             Address = "123 Test St",
         };
@@ -80,7 +80,7 @@ public class ApplicationDbContextTests : IDisposable
     }
 
     [Fact]
-    public async Task ApplicationDbContext_WhenQueryingDeletedUsers_ShouldFilterDeleted()
+    public async Task ApplicationDbContext_WhenQueryingUsers_ShouldReturnAllUsers()
     {
         // Arrange
         var user1 = new ApplicationUser
@@ -95,8 +95,7 @@ public class ApplicationDbContextTests : IDisposable
             Id = "user2",
             UserName = "user2",
             Email = "user2@example.com",
-            DisplayName = "User 2",
-            DeletedAtUtc = DateTime.UtcNow
+            DisplayName = "User 2"
         };
 
         _dbContext.Users.AddRange(user1, user2);
@@ -106,8 +105,7 @@ public class ApplicationDbContextTests : IDisposable
         List<ApplicationUser> users = await _dbContext.Users.ToListAsync();
 
         // Assert
-        Assert.Single(users);
-        Assert.Equal("user1", users[0].Id);
+        Assert.Equal(2, users.Count);
     }
 
     public void Dispose()

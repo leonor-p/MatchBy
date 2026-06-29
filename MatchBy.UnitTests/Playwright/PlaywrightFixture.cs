@@ -12,7 +12,7 @@ public class PlaywrightFixture : IAsyncLifetime
     {
         // Install Playwright browsers if not already installed
         // This will only install if needed
-        Program.Main(["install", "chromium"]);
+        Microsoft.Playwright.Program.Main(["install", "chromium"]);
 
         _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         Browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions

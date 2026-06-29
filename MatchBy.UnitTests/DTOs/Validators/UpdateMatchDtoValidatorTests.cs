@@ -324,6 +324,7 @@ public class UpdateMatchDtoValidatorTests
             Description = "Test match description",
             MinPlayers = 5,
             MaxPlayers = 10,
+            MinimumPlayersRating = MinimumPlayersAverage.All,
             Location = new Location(40.7128, -74.0060, "New York", "USA"),
             Address = "123 Main Street",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(1),

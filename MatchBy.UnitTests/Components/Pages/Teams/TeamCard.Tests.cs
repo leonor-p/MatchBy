@@ -249,13 +249,14 @@ public class TeamCardTests
         var owner = new UserDto
         {
             Id = "owner-id",
+            UserName = "team_owner",
             DisplayName = "Team Owner",
-            AvatarUrl = "https://example.com/owner-avatar.jpg",
-            PlayerRating = null
+            AvatarUrl = "https://example.com/owner-avatar.jpg"
         };
         var member = new UserDto
         {
             Id = "member-id",
+            UserName = "team_member",
             DisplayName = "Team Member",
             AvatarUrl = "https://example.com/member-avatar.jpg"
         };
@@ -280,14 +281,15 @@ public class TeamCardTests
         var owner = new UserDto
         {
             Id = "owner-id",
+            UserName = "team_owner",
             DisplayName = "Team Owner",
-            AvatarUrl = "https://example.com/owner-avatar.jpg",
-            PlayerRating = null
+            AvatarUrl = "https://example.com/owner-avatar.jpg"
         };
         var members = Enumerable.Range(1, memberCount)
             .Select(i => new UserDto
             {
                 Id = $"member-id-{i}",
+                UserName = $"member_{i}",
                 DisplayName = $"Member {i}",
                 AvatarUrl = $"https://example.com/member-{i}-avatar.jpg"
             })
