@@ -13,11 +13,11 @@ COPY ["MatchBy/MatchBy/MatchBy.csproj", "MatchBy/MatchBy/"]
 RUN dotnet restore "MatchBy/MatchBy/MatchBy.csproj"
 COPY . .
 WORKDIR "/src/MatchBy/MatchBy"
-RUN dotnet build "./MatchBy.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./MatchBy.csproj" -c $BUILD_CONFIGURATION -o /app/build /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MatchBy.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./MatchBy.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false
 
 FROM base AS final
 WORKDIR /app

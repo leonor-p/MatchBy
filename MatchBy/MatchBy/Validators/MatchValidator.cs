@@ -11,14 +11,14 @@ public class MatchValidator : AbstractValidator<Match>
             .NotEmpty().WithMessage("Description is required.")
             .MaximumLength(500).WithMessage("Description cannot exceed 500 characters.");
         
-        RuleFor(x => x.minPlayers)
+        RuleFor(x => x.MinPlayers)
             .GreaterThan(0).WithMessage("Minimum players must be greater than 0.")
             .LessThanOrEqualTo(30).WithMessage("Minimum players must be less than or equal to 30.");
-        
-        RuleFor(x => x.maxPlayers)
+
+        RuleFor(x => x.MaxPlayers)
             .GreaterThan(0).WithMessage("Maximum players must be greater than 0.")
             .LessThanOrEqualTo(30).WithMessage("Maximum players must be less than or equal to 30.")
-            .GreaterThanOrEqualTo(x => x.minPlayers).WithMessage("Maximum players must be greater than or equal to minimum players.");
+            .GreaterThanOrEqualTo(x => x.MinPlayers).WithMessage("Maximum players must be greater than or equal to minimum players.");
         
         RuleFor(x => x.Location)
             .NotNull().WithMessage("Location is required.");
