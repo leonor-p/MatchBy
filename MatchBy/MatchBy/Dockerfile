@@ -8,7 +8,6 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["MatchBy/MatchBy/MatchBy.csproj", "MatchBy/MatchBy/"]
-COPY ["MatchBy/MatchBy.Client/MatchBy.Client.csproj", "MatchBy/MatchBy.Client/"]
 RUN dotnet restore "MatchBy/MatchBy/MatchBy.csproj"
 COPY . .
 WORKDIR "/src/MatchBy/MatchBy"
