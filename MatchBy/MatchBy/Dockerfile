@@ -7,6 +7,8 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["Directory.Build.props", "Directory.Build.props"]
+COPY ["Directory.Packages.props", "Directory.Packages.props"]
 COPY ["MatchBy/MatchBy/MatchBy.csproj", "MatchBy/MatchBy/"]
 RUN dotnet restore "MatchBy/MatchBy/MatchBy.csproj"
 COPY . .
