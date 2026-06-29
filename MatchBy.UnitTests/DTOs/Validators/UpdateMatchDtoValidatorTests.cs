@@ -284,7 +284,7 @@ public class UpdateMatchDtoValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.MatchDateTimeUtc)
-            .WithErrorMessage("Match must be scheduled at least 7 days in the future.");
+            .WithErrorMessage("Match date and time must be in the future.");
     }
 
     [Fact]
